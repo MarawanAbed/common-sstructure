@@ -124,14 +124,14 @@ class AuthCubit extends Cubit<AuthState> {
 
   String? imageUrl;
 
-  uploadImageMethod(File? imageFile) async {
-    if (imageFile == null) {
+  uploadImageMethod() async {
+    if (profileImage == null) {
       Utils.showSnackBar('No image selected');
       return;
     }
     emit(const AuthState.imageUploadLoadingState());
     try {
-      imageUrl = await _storageService.uploadImage(imageFile);
+      imageUrl = await _storageService.uploadImage(profileImage!);
       print(imageUrl);
       emit(const AuthState.imageUploadSuccessState());
     } catch (e) {

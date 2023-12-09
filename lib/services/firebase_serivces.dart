@@ -16,7 +16,7 @@ class AuthService {
   Future<UserCredential> signIn(
       {required String email, required String password}) async {
     try {
-       await _auth.signInWithEmailAndPassword(
+      await _auth.signInWithEmailAndPassword(
         email: email,
         password: password,
       );
@@ -32,7 +32,12 @@ class AuthService {
         Utils.showSnackBar('Wrong password provided for that user.');
       }
     }
-    throw Exception('Failed to sign in');
+    //this after you update email and password there is problem might found so i add this
+    //to update user data after update email and password
+    return _auth.signInWithEmailAndPassword(
+      email: email,
+      password: password,
+    );
   }
 
   Future<void> forgetPassword(String email) async {
@@ -120,6 +125,19 @@ class AuthService {
       }
     }
   }
+
+  updateEmailAndPassword({required String email, required String password}) async {
+    try {
+      final user = _auth.currentUser!;
+      await user.updateEmail(email);
+      await user.updatePassword(password);
+    } catch (e) {
+      if (kDebugMode) {
+        print('Update email and password error: $e');
+      }
+      throw Exception('Failed to update email and password');
+    }
+  }
 }
 
 class DatabaseService {
@@ -139,26 +157,14 @@ class DatabaseService {
     }
   }
 
-  Stream<List> getAllUsers() {
-    final userCollection =
-        _firestore.collection('users').orderBy('lastActive', descending: true);
+  Stream<List<UserEntity>> getAllUsers() {
+    final userCollection = _firestore.collection('users').orderBy('lastActive', descending: true);
 
     return userCollection.snapshots(includeMetadataChanges: true).map(
-      (querySnapshot) {
-        if (querySnapshot.docs.isNotEmpty) {
-          return querySnapshot.docs
-              .map((doc) => UserEntity.fromJson(doc.data()))
-              .toList();
-        } else {
-          return []; // Return an empty list if no users are found
-        }
-      },
-    ).handleError((error) {
-      if (kDebugMode) {
-        print('Error fetching users: $error');
-      }
-      throw Exception('Failed to fetch users');
-    });
+          (querySnapshot) => querySnapshot.docs
+          .map((e) => UserEntity.fromJson(e.data()))
+          .toList(),
+    );
   }
 
   Future<void> updateUser(Map<String, dynamic> data) async {
@@ -175,16 +181,15 @@ class DatabaseService {
     }
   }
 
-  Stream<UserEntity?> getSingleUser(String uId) {
+  Stream<UserEntity> getSingleUser(String uId) {
     final userDoc = _firestore.collection('users').doc(uId);
 
-    return userDoc.snapshots().map((userSnapshot) {
+    return userDoc.snapshots(includeMetadataChanges: true).map((userSnapshot) {
       if (userSnapshot.exists) {
         final userData = userSnapshot.data() as Map<String, dynamic>;
         return UserEntity.fromJson(userData);
-      } else {
-        return null; // User not found
       }
+      throw Exception('User does not exist');
     });
   }
 }
