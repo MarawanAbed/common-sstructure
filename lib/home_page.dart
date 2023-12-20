@@ -1,3 +1,4 @@
+import 'package:firebase_advanced/chat_page.dart';
 import 'package:firebase_advanced/cubit/home_cubit.dart';
 import 'package:firebase_advanced/profile.dart';
 import 'package:firebase_advanced/services/firebase_serivces.dart';
@@ -58,7 +59,9 @@ class UserItems extends StatelessWidget {
       trailing: Row(
         mainAxisSize: MainAxisSize.min,
         children: [
-          IconButton(onPressed: () {}, icon: const Icon(Icons.message)),
+          IconButton(onPressed: () {
+            Navigator.push(context, MaterialPageRoute(builder: (context)=>ChatPage(user: users,)));
+          }, icon: const Icon(Icons.message)),
           const SizedBox(width: 10.0),
           IconButton(
             onPressed: () {

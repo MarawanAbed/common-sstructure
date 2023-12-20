@@ -1,5 +1,6 @@
 import 'package:firebase_advanced/common.dart';
 import 'package:firebase_advanced/cubit/auth_cubit.dart';
+import 'package:firebase_advanced/cubit/chat_cubit.dart';
 import 'package:firebase_advanced/cubit/home_cubit.dart';
 import 'package:firebase_advanced/firebase_options.dart';
 import 'package:firebase_advanced/home_page.dart';
@@ -32,6 +33,7 @@ class MyApp extends StatelessWidget {
           create: (context) => AuthCubit(),
         ),
         BlocProvider(create: (context) => HomeCubit()..getAllUsers()),
+        BlocProvider(create: (context)=>ChatCubit(),),
       ],
       child: MaterialApp(
         scaffoldMessengerKey: Utils.messengerKey,

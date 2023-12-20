@@ -2,6 +2,7 @@ import 'dart:developer';
 import 'dart:io';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_advanced/chat_model.dart';
 import 'package:firebase_advanced/common.dart';
 import 'package:firebase_advanced/user.dart';
 import 'package:firebase_auth/firebase_auth.dart';
@@ -126,7 +127,8 @@ class AuthService {
     }
   }
 
-  updateEmailAndPassword({required String email, required String password}) async {
+  updateEmailAndPassword(
+      {required String email, required String password}) async {
     try {
       final user = _auth.currentUser!;
       await user.updateEmail(email);
@@ -158,13 +160,14 @@ class DatabaseService {
   }
 
   Stream<List<UserEntity>> getAllUsers() {
-    final userCollection = _firestore.collection('users').orderBy('lastActive', descending: true);
+    final userCollection =
+        _firestore.collection('users').orderBy('lastActive', descending: true);
 
     return userCollection.snapshots(includeMetadataChanges: true).map(
           (querySnapshot) => querySnapshot.docs
-          .map((e) => UserEntity.fromJson(e.data()))
-          .toList(),
-    );
+              .map((e) => UserEntity.fromJson(e.data()))
+              .toList(),
+        );
   }
 
   Future<void> updateUser(Map<String, dynamic> data) async {
@@ -190,6 +193,112 @@ class DatabaseService {
         return UserEntity.fromJson(userData);
       }
       throw Exception('User does not exist');
+    });
+  }
+
+  Future<void> addTextMessage({required MessageModel messageEntity}) async {
+    final uId = AuthService().getCurrentUserId();
+    final message = MessageModel(
+      senderId: uId!,
+      receiverId: messageEntity.receiverId,
+      content: messageEntity.content,
+      sendTime: DateTime.now(),
+      messageType: MessageType.text,
+    ).toMap();
+    if (uId == messageEntity.receiverId) {
+      //that me i send message to my self
+      await _firestore
+          .collection('users')
+          .doc(uId)
+          .collection('chats')
+          .doc(messageEntity.receiverId)
+          .collection('messages')
+          .add(message);
+    } else {
+      //that me i send message to other user
+      await _firestore
+          .collection('users')
+          .doc(uId)
+          .collection('chats')
+          .doc(messageEntity.receiverId)
+          .collection('messages')
+          .add(message);
+      //that other user i send message to me
+      await _firestore
+          .collection('users')
+          .doc(messageEntity.receiverId)
+          .collection('chats')
+          .doc(uId)
+          .collection('messages')
+          .add(message);
+    }
+  }
+
+  Future<void> addImageMessage({required MessageModel messageEntity}) async {
+    final uId = AuthService().getCurrentUserId();
+    final message = MessageModel(
+      senderId: uId!,
+      receiverId: messageEntity.receiverId,
+      content: messageEntity.content,
+      sendTime: DateTime.now(),
+      messageType: MessageType.image,
+    ).toMap();
+    if (uId == messageEntity.receiverId) {
+      //that me i send message to my self
+      await _firestore
+          .collection('users')
+          .doc(uId)
+          .collection('chats')
+          .doc(messageEntity.receiverId)
+          .collection('messages')
+          .add(message);
+    } else {
+      //that me i send message to other user
+      await _firestore
+          .collection('users')
+          .doc(uId)
+          .collection('chats')
+          .doc(messageEntity.receiverId)
+          .collection('messages')
+          .add(message);
+      //that other user i send message to me
+      await _firestore
+          .collection('users')
+          .doc(messageEntity.receiverId)
+          .collection('chats')
+          .doc(uId)
+          .collection('messages')
+          .add(message);
+    }
+  }
+
+  Stream<List<MessageModel>> getAllMessage({required String receiverId}) {
+    final uId = AuthService().getCurrentUserId();
+    final messageCollection = _firestore
+        .collection('users')
+        .doc(uId)
+        .collection('chats')
+        .doc(receiverId)
+        .collection('messages')
+        .orderBy('sendTime', descending: false)
+        .snapshots(includeMetadataChanges: true);
+    return messageCollection.map((querySnapshot) {
+      return querySnapshot.docs
+          .map((e) => MessageModel.fromJson(e.data()))
+          .toList();
+    });
+  }
+
+  Stream<List<UserEntity>> searchUser({required String name}) {
+    final userCollection = _firestore
+        .collection('users')
+        .where('name', isGreaterThanOrEqualTo: name)
+        .where('name', isLessThanOrEqualTo: '$name\uf8ff')
+        .snapshots(includeMetadataChanges: true);
+    return userCollection.map((querySnapshot) {
+      return querySnapshot.docs
+          .map((e) => UserEntity.fromJson(e.data()))
+          .toList();
     });
   }
 }

@@ -28,7 +28,7 @@ class _VerifyEmailState extends State<VerifyEmail> {
               Utils.showSnackBar(message);
             },
             verificationSuccessState: () {
-              Utils.showSnackBar('Verification email sent.');
+              Utils.showSnackBar('Verification Success.');
               Navigator.pushAndRemoveUntil(context,
                   MaterialPageRoute(builder: (context) => const LoginPage()), (
                       route) => false);
@@ -40,40 +40,42 @@ class _VerifyEmailState extends State<VerifyEmail> {
           body: SafeArea(
             child: Padding(
               padding: const EdgeInsets.all(20.0),
-              child: SingleChildScrollView(
-                child: Column(
-                  crossAxisAlignment: CrossAxisAlignment.center,
-                  children: [
-                    const Text(
-                      'Verify Email',
-                      style: TextStyle(
-                        fontSize: 25,
-                        fontWeight: FontWeight.bold,
+              child: Center(
+                child: SingleChildScrollView(
+                  child: Column(
+                    crossAxisAlignment: CrossAxisAlignment.center,
+                    children: [
+                      const Text(
+                        'Verify Email',
+                        style: TextStyle(
+                          fontSize: 25,
+                          fontWeight: FontWeight.bold,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 20.0),
-                    const Text(
-                      'A verification email has been sent to. Please verify your email to continue.',
-                      textAlign: TextAlign.center,
-                      style: TextStyle(
-                        fontSize: 18,
+                      const SizedBox(height: 20.0),
+                      const Text(
+                        'A verification email has been sent to. Please verify your email to continue.',
+                        textAlign: TextAlign.center,
+                        style: TextStyle(
+                          fontSize: 18,
+                        ),
                       ),
-                    ),
-                    const SizedBox(height: 20.0),
-                    ElevatedButton(
-                      onPressed: () {
-                        cubit.sendVerificationEmail();
-                      },
-                      child: const Text('Resend Email'),
-                    ),
-                    const SizedBox(height: 20.0),
-                    ElevatedButton(
-                      onPressed: () {
-                        cubit.signOutMethod();
-                      },
-                      child: const Text('cancel'),
-                    ),
-                  ],
+                      const SizedBox(height: 20.0),
+                      ElevatedButton(
+                        onPressed: () {
+                          cubit.sendVerificationEmail();
+                        },
+                        child: const Text('Resend Email'),
+                      ),
+                      const SizedBox(height: 20.0),
+                      ElevatedButton(
+                        onPressed: () {
+                          cubit.signOutMethod();
+                        },
+                        child: const Text('cancel'),
+                      ),
+                    ],
+                  ),
                 ),
               ),
             ),
