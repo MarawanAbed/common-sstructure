@@ -1,5 +1,6 @@
 import 'package:firebase_advanced/chat_model.dart';
 import 'package:firebase_advanced/cubit/chat_cubit.dart';
+import 'package:firebase_advanced/services/notification_services.dart';
 import 'package:firebase_advanced/user.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
@@ -74,44 +75,8 @@ class ChatMessage extends StatefulWidget {
 }
 
 class _ChatMessageState extends State<ChatMessage> {
-  final List<MessageModel> chat = [
-    MessageModel(
-      senderId: '1',
-      receiverId: '2',
-      content: 'Hello, How are you?',
-      sendTime: DateTime.now(),
-      messageType: MessageType.text,
-    ),
-    MessageModel(
-      senderId: '2',
-      receiverId: '1',
-      content: 'I am fine, How are you?',
-      sendTime: DateTime.now(),
-      messageType: MessageType.text,
-    ),
-    MessageModel(
-      senderId: '1',
-      receiverId: '2',
-      content: 'I am fine too.',
-      sendTime: DateTime.now(),
-      messageType: MessageType.text,
-    ),
-    MessageModel(
-      senderId: '2',
-      receiverId: '1',
-      content: 'How is your day going?',
-      sendTime: DateTime.now(),
-      messageType: MessageType.text,
-    ),
-    MessageModel(
-      senderId: '1',
-      receiverId: '2',
-      content: 'https://picsum.photos/250?image=9',
-      sendTime: DateTime.now(),
-      messageType: MessageType.image,
-    ),
-  ];
 
+  final RemoteNotificationService remoteNotificationService=RemoteNotificationService();
   @override
   void initState() {
     var cubit = ChatCubit.get(context);
@@ -139,6 +104,9 @@ class _ChatMessageState extends State<ChatMessage> {
       },
       builder: (context, state) {
         return state.maybeWhen(orElse: () {
+          BlocProvider.of<ChatCubit>(context).getAllMessage(
+            receiverId: widget.receiverId,
+          );
           return const Center(child: CircularProgressIndicator());
         }, success: (messages) {
           return ListView.builder(
@@ -171,7 +139,11 @@ class ChatTextField extends StatefulWidget {
 }
 
 class _ChatTextFieldState extends State<ChatTextField> {
-  TextEditingController messageController = TextEditingController();
+  TextEditingController messageController = TextEditingController() ;
+  @override
+  void initState() {
+    super.initState();
+  }
 
   @override
   Widget build(BuildContext context) {

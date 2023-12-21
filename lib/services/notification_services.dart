@@ -1,12 +1,13 @@
 import 'dart:convert';
 
 import 'package:cloud_firestore/cloud_firestore.dart';
+import 'package:firebase_advanced/firebase_options.dart';
 import 'package:firebase_auth/firebase_auth.dart';
+import 'package:firebase_core/firebase_core.dart';
 import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 import 'package:http/http.dart' as http;
-
 
 ///steps to use remote notification
 ///1- we need user token to send notification to him so we make a method to get user token
@@ -17,25 +18,41 @@ import 'package:http/http.dart' as http;
 ///and we request permission then we get token and save it
 ///3- now we need to send notification to user so we make a method to send notification
 ///4- now we need to get receiver token to send notification to him so we make a method to get
+Future<void> _firebaseMessagingBackgroundHandler(RemoteMessage message) async {
+  await Firebase.initializeApp(
+    options: DefaultFirebaseOptions.currentPlatform,
+  );
+  print('Handling a background message ${message.messageId}');
+}
 
 class RemoteNotificationService {
-  final FirebaseMessaging _firebaseMessaging;
-  final FirebaseFirestore _firestore;
-  final String _serverKey; // Firebase server key
+  static const key =
+      'AAAAnqzCkZQ:APA91bGVTGo1VqbR5hTDgf0NK9p5sLkkOqDsi9ktY2wPJQSKoBbh5NHO8bWT4_5p4TEfEs8gq7BBU_A9ByCJtTyg-AISQUZJlpPS7iXbfCPjdRFn6bkJAyEuuo3hw7dihTy2n29-VG3Z';
+  final flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
 
-  RemoteNotificationService(
-    this._firebaseMessaging,
-    this._firestore,
-    this._serverKey,
-  );
-
-  Future<void> initNotificationService() async {
-    await requestPermission();
-    await getToken();
+   void firebaseNotification() {
+    print('firebaseNotification');
+    FirebaseMessaging.onMessageOpenedApp.listen((message) async {
+      print('onMessageOpenedApp: $message');
+    });
+    FirebaseMessaging.onMessage.listen((RemoteMessage message) async {
+      print('Got a message whilst in the foreground!');
+      print('Message data: ${message.data}');
+      if (message.notification != null) {
+        print('Message also contained a notification: ${message.notification}');
+        await LocalNotificationsServices.showText(
+          title: message.notification!.title!,
+          body: message.notification!.body!,
+          fln: flutterLocalNotificationsPlugin,
+        );
+      }
+    });
+    FirebaseMessaging.onBackgroundMessage(_firebaseMessagingBackgroundHandler);
   }
 
   Future<void> requestPermission() async {
-    final settings = await _firebaseMessaging.requestPermission(
+    final message = FirebaseMessaging.instance;
+    final settings = await message.requestPermission(
       alert: true,
       announcement: false,
       badge: true,
@@ -44,7 +61,6 @@ class RemoteNotificationService {
       provisional: false,
       sound: true,
     );
-
     if (settings.authorizationStatus == AuthorizationStatus.authorized) {
       debugPrint('User granted permission');
     } else if (settings.authorizationStatus ==
@@ -55,28 +71,25 @@ class RemoteNotificationService {
     }
   }
 
-  Future<String?> getToken() async {
-    final token = await _firebaseMessaging.getToken();
-    if (token != null) {
-      await _saveToken(token);
-      return token;
-    }
-    return null;
+  Future<void> getToken() async {
+    final token = await FirebaseMessaging.instance.getToken();
+    _saveToken(token!);
   }
 
   Future<void> _saveToken(String token) async {
-    final currentUser = FirebaseAuth.instance.currentUser;
-    if (currentUser != null) {
-      await _firestore
-          .collection('users')
-          .doc(currentUser.uid)
-          .set({'token': token}, SetOptions(merge: true));
-    }
+    await FirebaseFirestore.instance
+        .collection('users')
+        .doc(FirebaseAuth.instance.currentUser!.uid)
+        .set({'token': token},
+            SetOptions(merge: true)); //replace token each time we login
   }
 
-  Future<String?> getReceiverToken(String receiverId) async {
-    final getToken = await _firestore.collection('users').doc(receiverId).get();
-    return getToken.data()?['token'];
+  Future<String> getReceiverToken(String receiverId) async {
+    final getToken = await FirebaseFirestore.instance
+        .collection('users')
+        .doc(receiverId)
+        .get();
+    return await getToken.data()!['token'];
   }
 
   Future<void> sendNotification({
@@ -85,32 +98,45 @@ class RemoteNotificationService {
     required String receiverToken,
   }) async {
     try {
-      await http.post(
-        Uri.parse('https://fcm.googleapis.com/fcm/send'),
+      const String fcmUrl = 'https://fcm.googleapis.com/fcm/send';
+
+      // Debug log to check if the receiver token is available
+      print('Receiver Token: $receiverToken');
+
+      final Map<String, dynamic> payload = {
+        'to': receiverToken,
+        'priority': 'high',
+        'notification': {
+          'body': body,
+          'title': 'New Message',
+        },
+        'data': {
+          'click_action': 'FLUTTER_NOTIFICATION_CLICK',
+          'status': 'done',
+          'senderId': senderId,
+        },
+      };
+
+      final http.Response response = await http.post(
+        Uri.parse(fcmUrl),
         headers: <String, String>{
           'Content-Type': 'application/json',
-          'Authorization': 'key=$_serverKey',
+          'Authorization': 'key=$key',
         },
-        body: jsonEncode(
-          <String, dynamic>{
-            "to": receiverToken,
-            "priority": "high",
-            "notification": <String, dynamic>{
-              "body": body,
-              "title": "New Message",
-            },
-            "data": <String, String>{
-              "click_action": "FLUTTER_NOTIFICATION_CLICK",
-              "status": "done",
-              "senderId": senderId,
-            }
-          },
-        ),
+        body: jsonEncode(payload),
       );
-      // Handle success or use a callback to handle it in the UI
+
+      // Debug log to check the HTTP response status code
+      print('FCM Response Status Code: ${response.statusCode}');
+
+      if (response.statusCode == 200) {
+        print('Notification sent successfully!');
+      } else {
+        print(
+            'Failed to send notification. Status code: ${response.statusCode}');
+      }
     } catch (e) {
-      debugPrint(e.toString());
-      // Handle failure or use a callback to handle it in the UI
+      print('Error sending notification: $e');
     }
   }
 }

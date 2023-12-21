@@ -4,6 +4,7 @@ import 'dart:io';
 
 import 'package:firebase_advanced/common.dart';
 import 'package:firebase_advanced/services/firebase_serivces.dart';
+import 'package:firebase_advanced/services/notification_services.dart';
 import 'package:firebase_advanced/user.dart';
 import 'package:firebase_advanced/utils/helper_method/helper_method.dart';
 import 'package:flutter/material.dart';
@@ -21,6 +22,8 @@ class AuthCubit extends Cubit<AuthState> {
 
   final StorageService _storageService = StorageService();
 
+  final RemoteNotificationService _remoteNotificationService =
+      RemoteNotificationService();
   static AuthCubit get(context) => BlocProvider.of(context);
 
   bool isVisible = true;
@@ -82,6 +85,8 @@ class AuthCubit extends Cubit<AuthState> {
     emit(const AuthState.authLoadingState());
     try {
       await _authService.signIn(email: email, password: password);
+      await _remoteNotificationService.requestPermission();
+      await _remoteNotificationService.getToken();
       emit(const AuthState.authSuccessState());
     } catch (e) {
       emit(AuthState.authErrorState(e.toString()));
@@ -94,6 +99,8 @@ class AuthCubit extends Cubit<AuthState> {
       await _authService.signUp(
           email: userEntity.email!, password: userEntity.password!);
       await _databaseService.createUser(userEntity);
+      await _remoteNotificationService.requestPermission();
+      await _remoteNotificationService.getToken();
       emit(const AuthState.authSuccessState());
 
     } catch (e) {

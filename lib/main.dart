@@ -7,17 +7,32 @@ import 'package:firebase_advanced/home_page.dart';
 import 'package:firebase_advanced/login.dart';
 import 'package:firebase_advanced/services/bloc_observer.dart';
 import 'package:firebase_advanced/services/firebase_serivces.dart';
+import 'package:firebase_advanced/services/notification_services.dart';
+import 'package:firebase_advanced/utils/navigate/navigates.dart';
 import 'package:firebase_advanced/verify_email.dart';
 import 'package:firebase_auth/firebase_auth.dart';
 import 'package:firebase_core/firebase_core.dart';
+import 'package:firebase_messaging/firebase_messaging.dart';
 import 'package:flutter/material.dart';
 import 'package:flutter_bloc/flutter_bloc.dart';
+import 'package:flutter_local_notifications/flutter_local_notifications.dart';
 
+
+final FlutterLocalNotificationsPlugin flutterLocalNotificationsPlugin = FlutterLocalNotificationsPlugin();
+final RemoteNotificationService remoteNotificationService = RemoteNotificationService();
 void main() async {
   WidgetsFlutterBinding.ensureInitialized();
   await Firebase.initializeApp(
     options: DefaultFirebaseOptions.currentPlatform,
   );
+  await FirebaseMessaging.instance.getInitialMessage();
+  await LocalNotificationsServices.init(flutterLocalNotificationsPlugin);
+  await FirebaseMessaging.instance.setForegroundNotificationPresentationOptions(
+    alert: true,
+    badge: true,
+    sound: true,
+  );
+  remoteNotificationService.firebaseNotification();
   Bloc.observer = MyBlocObserver();
   runApp(const MyApp());
 }
@@ -25,8 +40,10 @@ void main() async {
 class MyApp extends StatelessWidget {
   const MyApp({super.key});
 
+
   @override
   Widget build(BuildContext context) {
+
     return MultiBlocProvider(
       providers: [
         BlocProvider(
@@ -37,6 +54,7 @@ class MyApp extends StatelessWidget {
       ],
       child: MaterialApp(
         scaffoldMessengerKey: Utils.messengerKey,
+        navigatorKey: Navigators.navigationKey,
         debugShowCheckedModeBanner: false,
         home: StreamBuilder(
           stream: AuthService().userState(),
